@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+  <head>
+    <title>CivicTrack</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+        <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+        <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f9fc;
+      }
+      header {
+        background: #029cff;
+        color: #fff;
+        padding: 10px 16px;
+        font-size: 1.7em;
+      }
+      input,
+      select,
+      button {
+        margin: 3px 0;
+      }
+      .card {
+        background: white;
+        margin: 9px 0;
+        padding: 14px;
+        border-radius: 7px;
+        box-shadow: 0 1px 6px #cfcfcf;
+      }
+      img {
+        max-width: 70px;
+        max-height: 70px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>CivicTrack – Haryanvi Hunters</header>
+    <div id="app" class="container"></div>
+        <script type="text/babel">
+      const API = axios.create({});
+      function useForm(init) {
+        const [v, set] = React.useState(init);
+            const u = (e) => set({ ...v, [e.target.name]: e.target.value });
+            return [v, u, set];
+          }
+          function useAuth() {
+            const [a, set] = React.useState(() => {
+              let t = localStorage.tok;
+              let n = localStorage.nm;
+              let r = localStorage.rl;
+              return t ? { token: t, name: n, role: r } : null;
+            });
+            const l = async (e, p) => {
+              let { data } = await API.post("/api/login", {
+                email: e,
+                password: p,
+              });
+              localStorage.tok = data.token;
+              localStorage.nm = data.name;
+              localStorage.rl = data.role;
+              set({ token: data.token, name: data.name, role: data.role });
+            };
+            const lo = () => {
+              localStorage.clear();
+              set(null);
+            };
+            return [a, l, lo];
+          }
+          function App() {
+            const [a, l, lo] = useAuth();
+            const [p, sp] = React.useState("list");
+            const [f, sf] = React.useState({});
+            return (
+              <div>
+                <div>
+                  {a ? (
+                    <>
+                      Hi, {a.name} [{a.role}]{" "}
+                      <button onClick={lo}>Logout</button>{" "}
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => sp("login")}>Login</button>{" "}
+                  <button onClick={() => sp("register")}>Register</button>
+                </>
+              )}
+              {a?.role === "admin" && (
+                <button onClick={() => sp("admin")}>Admin</button>
+              )}{" "}
+            </div>
+            {p === "login" && <Login login={l} onDone={() => sp("list")} />}
+            {p === "register" && <Register onDone={() => sp("login")} />}
+            {p === "list" && (
+              <>
+                <button onClick={() => sp("new")}>+ Report Issue</button>
+                <IssueList filter={f} />
+                <div className="card">
+                  <b>Filters</b>
+                  <select
+                    onChange={(e) =>
+                      sf((x) => ({ ...x, category: e.target.value }))
+                    }
+                  >
+                    <option value="">Category</option>
+                    <option>Roads</option>
+                    <option>Lighting</option>
+                    <option>Water Safety</option>
+                    <option>Cleanliness</option>
+                    <option>Public Safety</option>
+                    <option>Obstructions</option>
+                  </select>
+                  <select
+                    onChange={(e) =>
+                      sf((x) => ({ ...x, status: e.target.value }))
+                    }
+                  >
+                    <option value="">Status</option>
+                    <option>Reported</option>
+                    <option>In Progress</option>
+                    <option>Resolved</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {p === "new" && (
+              <IssueForm user={a?.name} onDone={() => sp("list")} />
+            )}
+            {p === "admin" && <AdminPanel auth={a} />}
+          </div>
+        );
+      }
+      function Login({ login, onDone }) {
+        const [f, u] = useForm({});
+        const [m, sm] = React.useState("");
+        return (
+          <form
+            className="card"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await login(f.email, f.password);
+                onDone();
+              } catch {
+                sm("Wrong!");
+              }
+            }}
+          >
+            <b>Login</b>
+            <br/>
+            <input name="email" placeholder="Email" onChange={u} required />
+            <br/>
+            <input
+              name="password"
+              type="password"
+              placeholder="Password"
+              onChange={u}
+              required
+            />
+            <br/>
+            <button>Login</button> {m}
+            <div>
+              <b>Demo:</b>{" "}
+              <span style={{ fontFamily: "monospace" }}>
+                admin@ct.com / admin
+              </span>
+            </div>
+          </form>
+        );
+      }
+      function Register({ onDone }) {
+        const [f, u] = useForm({});
+        const [m, sm] = React.useState("");
+        return (
+          <form
+            className="card"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await API.post("/api/register", f);
+                sm("Registered! Log in.");
+                setTimeout(onDone, 800);
+              } catch {
+                sm("Error!");
+              }
+            }}
+          >
+            <b>Register</b>
+            <br />
+            <input name="name" placeholder="Name" onChange={u} required />
+            <br/>
+            <input name="email" placeholder="Email" onChange={u} required />
+            <br/>
+            <input
+              name="password"
+              type="password"
+              placeholder="Password"
+              onChange={u}
+              required
+            />
+            <br/>
+            <button>Register</button> {m}
+          </form>
+        );
+      }
+      function IssueList({ filter }) {
+        const [d, sd] = React.useState([]);
+        React.useEffect(() => {
+          API.get("/api/issues", { params: filter }).then((r) =>
+            sd(r.data || []),
+          );
+        }, [filter]);
+        return (
+          <div>
+            {d.length === 0 && <span>No issues reported yet.</span>}
+            {d.map((i, k) => (
+              <div className="card" key={k}>
+                <b>{i.category}</b> – {i.description} <br/>
+                Status: {i.status} | By: {i.user} <br/>
+                Lat: {i.location && i.location.lat}, Lng:{" "}
+                {i.location && i.location.lng} <br/>
+                {i.photoURL && <img src={i.photoURL} />}
+                <br/>
+                <button
+                  onClick={() =>
+                    API.post(`/api/issues/${i._id}/flag`).then(() =>
+                      alert("Flagged!"),
+                    )
+                  }
+                >
+                  Flag as Spam
+                </button>
+                <StatusHistory sh={i.statusHistory} />
+              </div>
+            ))}
+          </div>
+        );
+      }
+      function StatusHistory({ sh }) {
+        return (
+          <details>
+            <summary>Status Log</summary>
+            {(sh || []).map((h, x) => (
+              <div key={x}>
+                {h.status} @ {new Date(h.timeChanged).toLocaleString()}
+              </div>
+            ))}
+          </details>
+        );
+      }
+      function IssueForm({ user, onDone }) {
+        const [f, u] = useForm({ category: "Roads" });
+        const [m, sm] = React.useState("");
+        return (
+          <form
+            className="card"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await API.post("/api/issues", {
+                ...f,
+                location: { lat: f.lat, lng: f.lng },
+                user: user || "Anonymous",
+              });
+              sm("Submitted.");
+              setTimeout(onDone, 1000);
+            }}
+          >
+            <b>Report Issue</b>
+            <br/>
+            <input
+              name="description"
+              onChange={u}
+              placeholder="Description"
+              required
+            />
+            <br />
+            <select name="category" onChange={u} defaultValue="Roads">
+              <option>Roads</option>
+              <option>Lighting</option>
+              <option>Water Safety</option>
+              <option>Cleanliness</option>
+              <option>Public Safety</option>
+              <option>Obstructions</option>
+            </select>
+            <br />
+            <input name="lat" onChange={u} placeholder="Latitude" required/>
+            <input name="lng" onChange={u} placeholder="Longitude" required/>
+            <br/>
+            <input
+              name="photoURL"
+              onChange={u}
+              placeholder="Image URL (any online pic)"
+            />
+            <br/>
+            <button>Submit</button> {m}
+          </form>
+        );
+      }
+      function AdminPanel({ auth }) {
+        const [f, sf] = React.useState([]);
+        const [s, ss] = React.useState([]);
+        React.useEffect(() => {
+          API.get("/api/admin/flagged", {
+            headers: { Authorization: "Bearer " + auth.token },
+          }).then((r) => sf(r.data));
+          API.get("/api/admin/analytics", {
+            headers: { Authorization: "Bearer " + auth.token },
+          }).then((r) => ss(r.data.stats || []));
+        }, []);
+        return (
+          <div>
+            <h3>Flagged Issues</h3>
+            {f.map((x, i) => (
+              <div key={i} className="card">
+                {x.category} - {x.description}
+                <br/>
+                Flags:{x.spamFlags}
+                <br/>
+                Status:{x.status}
+              </div>
+            ))}
+            <h3>Analytics</h3>
+            <ul>
+              {s.map((x) => (
+                <li key={x.category}>
+                  {x.category}:{x.count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+      ReactDOM.createRoot(document.getElementById("app")).render(<App/>);
+    </script>
+  </body>
+</html>
