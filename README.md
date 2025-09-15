@@ -50,7 +50,6 @@ Koi bhi spam/galat report “flag” ho sakti hai, and admin panel se analytics 
 4. Kisi bhi problem ko flag karo (spam)
 5. Admin se login karke “Analytics” aur “Flagged Issues” dekh sakte ho
 
-**Demo video:** [Yahan apni video ka link daal dena jab bana lo]
 
 
 
